@@ -1,38 +1,52 @@
-import { MongoClient } from "mongodb"
-import dotenv from 'dotenv'
+import { MongoClient } from "mongodb";
+import dotenv from "dotenv";
+import express from "express";
+import { createShoes, getShoesCollection, createClient } from "./shoeStore.js";
+import { getOrderById, createOrders } from "./orders.js";
+import { createCustomer, getCustomerCollection } from "./customers.js";
 
-dotenv.config()
-let _client
-//Top function deals with the CLUSTER. This is created to be reused
-//Only ever create one client, if it already exists just return it
-const createClient = async () => {
-  if(!_client){
-    _client = new MongoClient(process.env.MONGO_URL)
-    await _client.connect()
+dotenv.config();
+
+const app = express();
+app.use(express.json());
+
+app.post("/customers", async (req, res) => {
+  let customer = await createCustomer(req.body);
+  try {
+    res.status(201).send(customer);
+  } catch (e) {
+    res.status(500).send(e);
   }
-  return _client
-}
+});
 
-const getUserCollection = async () => {
-  const client = await createClient()
-  const db = client.db('DianaMongoDB')
-  return db.collection('user')
-}
+app.post("/shoes", async (req, res) => {
+  let shoes = await createShoes(req.body);
+  try {
+    res.status(201).send(shoes);
+  } catch (e) {
+    res.status(500).send(e);
+  }
+});
+app.get("/shoes", async (req, res) => {
+  let shoes = getShoesCollection(req.body);
+  try{
+    res.status(200).send(shoes)
+  }catch(e){
+    res.status(500).send(e)
+  }
+});
 
-const createUser = async ({name, dob, email})=>{
-  const userCollection = await getUserCollection()
-  await userCollection.insertOne({name, dob, email})
-  return {name, dob, email}
-}
+app.post("/orders", async (req, res) => {
+  let orders = createOrders(req.body)
+  try{
+    res.status(201).send(orders)
+  }catch(e){
+    res.status(500).send(e)
+  }
 
-const run = async () =>{
-  const client = await createClient()
-  await createUser({
-    name: 'Diana',
-    dob: new Date('10/11/1988'),
-    email: 'blah@snailmail.com'
-  })
-  await client.close()
 }
- run().then()
+  )
 
+app.get("/orders/:id", getOrderById);
+
+app.listen(3000, () => console.log("Listening on port 3000"));
